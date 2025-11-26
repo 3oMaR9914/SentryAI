@@ -9,6 +9,9 @@ from app.config import settings
 
 
 def get_google_tokens(code: str, service_type) -> dict[str, str]:
+    service_type = "calendar" if service_type == "google_calendar" else service_type
+    service_type = "tasks" if service_type == "google_tasks" else service_type
+
     data = {
         "code": code,
         "client_id": settings.google_client_id,
@@ -16,7 +19,7 @@ def get_google_tokens(code: str, service_type) -> dict[str, str]:
         "redirect_uri": settings.google_redirect_uri(service_type),
         "grant_type": "authorization_code",
     }
-    resp = requests.post("https://oauth2.googleapis.com/token", data=data)
+    resp = requests.post("https://oauth2.googleapis.com/token", data=data)  
     if not resp.ok:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to get token from Google")
     return resp.json()

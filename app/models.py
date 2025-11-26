@@ -53,6 +53,7 @@ class Task(Base):
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),   nullable=False)
     source          = Column(String,                                                nullable=False)
     added_at        = Column(TIMESTAMP(timezone=True),                              nullable=False, server_default=text("now()"))
+    updated_at      = Column(TIMESTAMP(timezone=True),                              nullable=True , server_default=text("now()"))
     
     title           = Column(String,                                                nullable=False)
     description     = Column(String,                                                nullable=False, server_default="")
@@ -65,7 +66,6 @@ class Task(Base):
     # Google sync (Temporary)
     google_task_id      = Column(String,                                            nullable=True, unique=True)     # id from Google Tasks
     google_tasklist_id  = Column(String,                                            nullable=True)                  # task list id
-    updated_at          = Column(TIMESTAMP(timezone=True),                          nullable=True)                  # last updated timestamp from Google
     
     owner = relationship("User")
 

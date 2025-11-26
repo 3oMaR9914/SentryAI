@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Response, Depends 
 from sqlalchemy.orm import Session 
 from typing import List 
+from datetime import datetime
 
 from app.database import get_db 
 from app import schemas, models, oauth2
@@ -62,6 +63,7 @@ def edit_task(task_id: int, updated_task: schemas.TaskCreate, db: Session = Depe
     if task.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to perform requested action")
     
+    updated_task.updated_at = datetime.now()
     task_query.update(updated_task.dict(), synchronize_session=False)
     db.commit()
     

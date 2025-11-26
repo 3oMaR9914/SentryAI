@@ -59,12 +59,18 @@ class Settings(BaseSettings):
     google_calendar_scopes: str
     google_tasks_scopes: str
     google_auth_scopes: str 
-    google_redirect_path: str
+    google_auth_redirect_path: str
+    google_integrations_redirect_path: str 
+    
     
     def google_redirect_uri(self, service: str = "") -> str:
-        path = f"{self.backend_base_url}{self.google_redirect_path}"
-        if service:
-            path += f"/{service}"
+        path = self.backend_base_url
+        match service:
+            case "login" | "signup":
+                path += self.google_auth_redirect_path + "/" + service
+            case "gmail" | "calendar" | "tasks":
+                path += self.google_integrations_redirect_path + "/" + service
+
         return path
     
     zoom_client_id: str 

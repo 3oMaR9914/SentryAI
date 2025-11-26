@@ -52,6 +52,7 @@ async def calendar_auth_callback(request: Request, db: Session = Depends(get_db)
     
 
     tokens = google_utils.get_google_tokens(code, "google_calendar")
+    
     google_utils.handle_token_save(user, tokens, db, "google_calendar")
 
     return {"message": "Calendar access granted successfully", "google_user": google_utils.get_google_user_info(tokens["access_token"])}
@@ -76,7 +77,8 @@ async def google_tasks_auth_callback(request: Request, db: Session = Depends(get
         raise HTTPException(status.HTTP_409_CONFLICT, "User already connected before.")
 
     tokens = google_utils.get_google_tokens(code, "google_tasks")
-    google_utils.handle_token_save(user_integration, tokens, db, "google_tasks")
+    
+    google_utils.handle_token_save(user, tokens, db, "google_tasks")
 
     return {"message": "Google Tasks connected", "google_user": google_utils.get_google_user_info(tokens["access_token"])}
 

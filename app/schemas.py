@@ -15,7 +15,7 @@ class UserRead(BaseModel):
     id: int 
     first_name: str 
     last_name: str  
-    birthday: date 
+    birthday: Optional[date] = None # there is a problem here in reading none birthday 
     
     class Config:
         orm_mode = True
@@ -29,6 +29,7 @@ class TaskCreate(BaseModel):
     status: str         # [In progress (pending) - Completed - failed]
     priority: str       # [Low - Medium - High]
     deadline: datetime 
+    updated_at: Optional[datetime] = None
 
 
 class TaskRead(BaseModel):
