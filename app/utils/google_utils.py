@@ -8,6 +8,14 @@ from app.utils import crypt_utils
 from app.config import settings 
 
 
+def get_google_user_info(access_token: str) -> dict:
+    resp = requests.get("https://www.googleapis.com/oauth2/v3/userinfo", headers={"Authorization": f"Bearer {access_token}"})
+    
+    if not resp.ok:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch Google user info")
+    return resp.json()
+
+
 def get_google_birthday(access_token: str) -> datetime.date | None:
     resp = requests.get("https://people.googleapis.com/v1/people/me?personFields=birthdays", headers={"Authorization": f"Bearer {access_token}"})
     
