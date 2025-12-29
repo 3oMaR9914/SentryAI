@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, DateTime, Boolean, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text 
+from datetime import datetime
 
 from app.database import Base 
 
@@ -37,7 +38,8 @@ class Integration(Base):
     __tablename__ = "integrations"
     id              = Column(Integer, primary_key=True)
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    service         = Column(String)    # gmail, google_calendar, google_tasks, zoom_meetings
+    service         = Column(String)    # google_tasks, google_classroom, zoom_meetings, trello_cards
+    # service_id      = Column(String, nullable=True, unique=True)
     
     access_token    = Column(String)
     refresh_token   = Column(String)
@@ -51,23 +53,33 @@ class Task(Base):
     
     id              = Column(Integer,                                               nullable=False, primary_key=True)
     user_id         = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),   nullable=False)
-    source          = Column(String,                                                nullable=False)
-    added_at        = Column(TIMESTAMP(timezone=True),                              nullable=False, server_default=text("now()"))
+    source          = Column(String,                                                nullable=False) # google_classroom
+    added_at        = Column(TIMESTAMP(timezone=True),                              nullable=False, server_default=text("now()")) 
     updated_at      = Column(TIMESTAMP(timezone=True),                              nullable=True , server_default=text("now()"))
     
     title           = Column(String,                                                nullable=False)
     description     = Column(String,                                                nullable=False, server_default="")
     status          = Column(String,                                                nullable=False)
-    deadline        = Column(TIMESTAMP(timezone=True),                              nullable=False)
+    deadline        = Column(TIMESTAMP(timezone=True),                              nullable=True)
     
     priority        = Column(String,                                                nullable=False)
     category        = Column(String,                                                nullable=False)
     
-    # Google sync (Temporary)
-    google_task_id      = Column(String,                                            nullable=True, unique=True)     # id from Google Tasks
-    google_tasklist_id  = Column(String,                                            nullable=True)                  # task list id
+    # Integrations sync task id (ALL external IDs in ONE COLUMN)
+    integration_provider_task_id = Column(String,                                            nullable=True, unique=True)
     
     owner = relationship("User")
+
+
+
+class TempTrelloToken(Base):
+    __tablename__ = "temp_trello_tokens"
+
+    id                  = Column(Integer, primary_key=True, index=True)
+    user_id             = Column(Integer, ForeignKey("users.id"), nullable=False)
+    oauth_token         = Column(String, nullable=False)
+    oauth_token_secret  = Column(String, nullable=True)
+    created_at          = Column(DateTime, default=datetime.utcnow)
 
 
 

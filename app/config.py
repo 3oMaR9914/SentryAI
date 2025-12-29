@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     google_client_secret: str
     google_gmail_scopes: str 
     google_calendar_scopes: str
+    google_classroom_scopes: str 
     google_tasks_scopes: str
     google_auth_scopes: str 
     google_auth_redirect_path: str
@@ -68,7 +69,7 @@ class Settings(BaseSettings):
         match service:
             case "login" | "signup":
                 path += self.google_auth_redirect_path + "/" + service
-            case "gmail" | "calendar" | "tasks":
+            case "gmail" | "calendar" | "tasks" | "classroom":
                 path += self.google_integrations_redirect_path + "/" + service
 
         return path
@@ -79,10 +80,18 @@ class Settings(BaseSettings):
     zoom_redirect_path: str 
     
     def zoom_redirect_uri(self):
-        return f"{self.backend_base_url}{self.zoom_redirect_path}"
+        # return f"{self.backend_base_url}{self.zoom_redirect_path}"
+        return f"https://guiltless-inadequately-wilda.ngrok-free.dev{self.zoom_redirect_path}"
     
+    
+    trello_api_key: str 
+    trello_client_secret: str
+    trello_app_name: str 
+    trello_redirect_path: str 
 
-
+    def trello_redirect_uri(self):
+        # return f"{self.backend_base_url}{self.trello_redirect_path}"
+        return f"https://guiltless-inadequately-wilda.ngrok-free.dev{self.trello_redirect_path}"
 
 
     class Config:
@@ -93,5 +102,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
 

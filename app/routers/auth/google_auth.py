@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from urllib.parse import unquote
+import json 
 
 from app.database import get_db
-from app.utils import google_utils
+from app.utils import google_utils, crypt_utils
 from app import models, oauth2
+
 
 
 router = APIRouter(prefix="/api/auth/google", tags=["Google-Auth"])
@@ -18,6 +21,11 @@ async def google_login():
 @router.get("/signup")
 async def google_signup():
     return RedirectResponse(url=google_utils.build_google_auth_url("signup"))
+
+
+@router.get("/connect")
+async def google_connect(current_user: models.User = Depends(oauth2.get_current_user)):
+    return RedirectResponse(url=google_utils.build_google_auth_url("signup", current_user.id)) 
 
 
 @router.get("/callback/login")
@@ -51,8 +59,10 @@ async def google_signup_callback(request: Request, db: Session = Depends(get_db)
     code = request.query_params.get("code")
     state = request.query_params.get("state")
     
+    
     if not code or not state:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing code or state")
+    
 
     tokens = google_utils.get_google_tokens(code, "signup")
     user_info = google_utils.get_google_user_info(tokens["access_token"])
@@ -63,23 +73,28 @@ async def google_signup_callback(request: Request, db: Session = Depends(get_db)
     
     if existing_provider:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
-
-    birthday = google_utils.get_google_birthday(tokens["access_token"])
     
-    user = models.User(
-        first_name=user_info.get("given_name"),
-        last_name=user_info.get("family_name"),
-        birthday=birthday,
-        is_verified=True,
-    )
+    user_id = json.loads(crypt_utils.decrypt(unquote(state))).get("user_id", None)
     
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    if not user_id:
+        birthday = google_utils.get_google_birthday(tokens["access_token"])
+        user = models.User(
+            first_name=user_info.get("given_name"),
+            last_name=user_info.get("family_name"),
+            birthday=birthday,
+            is_verified=True,
+        )
+        
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        user_id = user.id
+    
     
     auth_provider = models.AuthProvider(
         email = google_email,
-        user_id = user.id,
+        user_id = user_id,
         provider = "google",
     )
     
@@ -94,3 +109,4 @@ async def google_signup_callback(request: Request, db: Session = Depends(get_db)
         "service_type": "signup",
         "google_user": user_info,
     }
+

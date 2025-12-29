@@ -1,35 +1,17 @@
 from fastapi import APIRouter, Request, HTTPException, status, Depends 
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote, unquote
+import json, jwt
 
 from app.database import get_db
-from app import models, oauth2
 from app.config import settings
-import jwt  
+from app.utils import crypt_utils
+from app import models, oauth2
+
 
 
 router = APIRouter(prefix="/api/auth/apple", tags=["Apple-Auth"])
-
-
-def build_apple_auth_url(service_type: str):
-    params = {
-        "client_id": settings.apple_client_id,
-        "redirect_uri": settings.apple_redirect_uri(service_type),
-        "response_type": "code id_token",
-        "scope": "name email",
-        "response_mode": "form_post",
-        "state": service_type
-    }
-    return f"https://appleid.apple.com/auth/authorize?{urlencode(params)}"
-
-
-def decode_id_token(id_token: str):
-    try:
-        decoded = jwt.decode(id_token, options={"verify_signature": False})
-        return decoded
-    except Exception:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid id_token")
 
 
 @router.get("/login")
@@ -41,6 +23,10 @@ async def apple_login():
 async def apple_signup():
     return RedirectResponse(url=build_apple_auth_url("signup"))
 
+
+@router.get("/connect")
+async def apple_login(current_user: models.User = Depends(oauth2.get_current_user)):
+    return RedirectResponse(url=build_apple_auth_url("signup", current_user.id))
 
 @router.get("/callback/login")
 async def apple_login_callback(request: Request, db: Session = Depends(get_db)):
@@ -68,10 +54,11 @@ async def apple_login_callback(request: Request, db: Session = Depends(get_db)):
 @router.get("/callback/signup")
 async def apple_signup_callback(request: Request, db: Session = Depends(get_db)):
     code = request.query_params.get("code")
+    state = request.query_params.get("state")
     id_token = request.query_params.get("id_token")
     
-    if not code or not id_token:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing code or id_token")
+    if not code or not state or not id_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing code or state or id_token")
 
     apple_user = decode_id_token(id_token)
     apple_email = apple_user.get("email")
@@ -83,27 +70,32 @@ async def apple_signup_callback(request: Request, db: Session = Depends(get_db))
     
     full_name = request.query_params.get("full_name")
 
-    if full_name:
-        parts = full_name.split(" ", 1)
-        first_name = parts[0]
-        last_name = parts[1] if len(parts) > 1 else ""
-    else:
-        first_name = ""
-        last_name = ""
+    user_id = json.loads(crypt_utils.decrypt(unquote(state))).get("user_id", None)
     
-    user = models.User(
-        first_name=first_name,
-        last_name=last_name,
-        birthday = None,
-        is_verified=True,
-    )
+    if not user_id:
+        if full_name:
+            parts = full_name.split(" ", 1)
+            first_name = parts[0]
+            last_name = parts[1] if len(parts) > 1 else ""
+        else:
+            first_name = ""
+            last_name = ""
+        
+        user = models.User(
+            first_name=first_name,
+            last_name=last_name,
+            birthday = None,
+            is_verified=True,
+        )
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        user_id = user.id
     
     auth_provider = models.AuthProvider(
-        user_id=user.id,
+        user_id=user_id,
         provider="apple",
         email=apple_email,
     )
@@ -119,3 +111,32 @@ async def apple_signup_callback(request: Request, db: Session = Depends(get_db))
         "service_type": "signup",
         "apple_user": apple_user
     }
+
+
+def build_apple_auth_url(service_type: str, user_id: int | None = None):
+    state_data = {"service_type": service_type}
+    
+    if user_id:
+        state_data["user_id"] = user_id
+        
+    encrypted_state = crypt_utils.encrypt(json.dumps(state_data))
+    state = quote(encrypted_state)
+    
+    params = {
+        "client_id": settings.apple_client_id,
+        "redirect_uri": settings.apple_redirect_uri(service_type),
+        "response_type": "code id_token",
+        "scope": "name email",
+        "response_mode": "form_post",
+        "state": state
+    }
+    return f"https://appleid.apple.com/auth/authorize?{urlencode(params)}"
+
+
+def decode_id_token(id_token: str):
+    try:
+        decoded = jwt.decode(id_token, options={"verify_signature": False})
+        return decoded
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid id_token")
+

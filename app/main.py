@@ -10,7 +10,7 @@ from app.database import engine
 from app.routers import user, task
 from app.routers.auth import app_auth, google_auth, apple_auth, facebook_auth
 from app.routers.uploads import upload_files
-from app.routers.integrations import google_tasks, zoom_meetings
+from app.routers.integrations import sync_task, google_tasks, google_classroom, trello_cards, zoom_meetings
 # from archieve.tester import tester
 
 # creating database if not exists
@@ -38,13 +38,15 @@ app.include_router(google_auth.router)
 app.include_router(apple_auth.router)
 app.include_router(facebook_auth.router)
 
+app.include_router(sync_task.router)
+
 app.include_router(google_tasks.router)
+app.include_router(google_classroom.router)
+app.include_router(trello_cards.router)
 app.include_router(zoom_meetings.router)
 
 app.include_router(upload_files.router)
 
-# this router for testing urls
-# app.include_router(tester.app)
 
 
 
@@ -52,7 +54,7 @@ app.include_router(upload_files.router)
 # testing and printing the IP of the server if known
 # if __name__ == "__main__":
 #     host = "0.0.0.0"
-#     port = 8000
+#     port = 4040
 
 #     # Get container/server public IP (if exposed)
 #     hostname = socket.gethostname()

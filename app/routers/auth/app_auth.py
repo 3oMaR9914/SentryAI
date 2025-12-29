@@ -8,6 +8,7 @@ from app.utils import crypt_utils
 from app.utils.email_utils import send_reset_email
 from app.database import get_db 
 
+from app.routers.integrations import sync_task
 
 router = APIRouter(prefix="/api/auth", tags=["App-Auth"])
 
@@ -69,6 +70,8 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     
     # TODO i want to put here sync_all_user_integration_data func 
     # as for every refresh tokens get all also refresh it's data  
+    sync_task.sync_user(user)   
+
     
     return {
         "access_token": new_access_token,

@@ -18,7 +18,7 @@ class UserRead(BaseModel):
     birthday: Optional[date] = None # there is a problem here in reading none birthday 
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TaskCreate(BaseModel):
@@ -50,7 +50,7 @@ class TaskRead(BaseModel):
     updated_at: Optional[datetime] = None
     
     class Config:
-        orm_mode = True 
+        from_attributes = True
 
 
 class Token(BaseModel):
